@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iloncha (Snake) O'yini</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+        }
+        h1 {
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        canvas {
+            background-color: #34495e;
+            border: 4px solid #ecf0f1;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border-radius: 5px;
+        }
+        #scoreBoard {
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            background: #e74c3c;
+            padding: 5px 20px;
+            border-radius: 5px;
+        }
+        .controls {
+            margin-top: 15px;
+            text-align: center;
+            color: #bdc3c7;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Iloncha O'yini</h1>
+    <div id="scoreBoard">Ochko: <span id="score">0</span></div>
+    
+    <!-- O'yin oynasi -->
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    
+    <div class="controls">
+        <p>🎮 <b>Boshqarish:</b> Yo'nalish tugmalari (⬅️ ⬆️ ⬇️ ➡️) orqali boshqaring.</p>
+        <p>🔄 Qayta boshlash uchun sahifani yangilang (F5).</p>
+    </div>
+
+    <script>
+        // --- 1. O'yin sozlamalari ---
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("score");
+
+        const gridSize = 20; // Har bir katak o'lchami
+        const tileCount = canvas.width / gridSize; // Qator va ustunlar soni
+
+        let score = 0;
+        let speed = 7; // Boshlang'ich tezlik
+
+        // --- 2. Ilonning boshlang'ich holati ---
+        let snake = [
+            { x: 10, y: 10 } // Ilonning boshi
+        ];
+
+        // Boshlang'ich yo'nalish (boshida to'xtab turibdi)
+        let dx = 0;
+        let dy = 0;
+
+        // --- 3. Ovqat pozitsiyasi ---
+        let foodX = Math.floor(Math.random() * tileCount);
+        let foodY = Math.floor(Math.random() * tileCount);
+
+        // --- 4. Asosiy o'yin tsikli ---
+        function drawGame() {
+            changeSnakePosition();
+            
+            // Agar o'yin tugagan bo'lsa, funksiyani to'xtatish
+            if (isGameOver()) {
+                return;
+            }
+
+            clearScreen();
+            checkAppleCollision();
+            drawFood();
+            drawSnake();
+
+            // O'yinni belgilangan tezlikda qayta chaqirish
+            setTimeout(drawGame, 1000 / speed);
+        }
+
+        // --- 5. Ekranni tozalash ---
+        function clearScreen() {
+            ctx.fillStyle = '#34495e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // --- 6. Ilonni chizish ---
+        function drawSnake() {
+            for (let i = 0; i < snake.length; i++) {
+                // Boshqasi rangda, tanasi boshqa rangda
+                ctx.fillStyle = i === 0 ? '#27ae60' : '#2ecc71'; 
+                let part = snake[i];
+                ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
+            }
+        }
+
+        // --- 7. Ilonning joylashuvini o'zgartirish ---
+        function changeSnakePosition() {
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            snake.unshift(head); // Yangi bosh qo'shish
+            // Dumni kesish jarayoni ovqat yeyishga qarab checkAppleCollision da hal qilinadi
+        }
+
+        // --- 8. Ovqatni chizish ---
+        function drawFood() {
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(foodX * gridSize + gridSize/2, foodY * gridSize + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // --- 9. Ovqat yeyishni tekshirish ---
+        function checkAppleCollision() {
+            if (foodX === snake[0].x && foodY === snake[0].y) {
+                // Ovqat yeyildi: Ochkoni oshirish
+                score++;
+                scoreElement.innerHTML = score;
+                
+                // Har 5 ochkoda tezlikni oshirish
+                if (score % 5 === 0) speed++;
+
+                // Yangi ovqat yaratish
+                foodX = Math.floor(Math.random() * tileCount);
+                foodY = Math.floor(Math.random() * tileCount);
+            } else {
+                // Agar ovqat yemasdan yursa, eng oxirgi dumni o'chirib tashlaymiz
+                snake.pop(); 
+            }
+        }
+
+        // --- 10. O'yin tugaganini tekshirish (Yutqazish holatlari) ---
+        function isGameOver() {
+            let gameOver = false;
+
+            // O'yin endi boshlangan bo'lsa (hali harakatlanmasa), tekshirilmaydi
+            if (dx === 0 && dy === 0) return false;
+
+            // a) Devorga urilish
+            if (snake[0].x < 0 || snake[0].x >= tileCount || snake[0].y < 0 || snake[0].y >= tileCount) {
+                gameOver = true;
+            }
+
+            // b) O'ziga urilish (boshini qolgan tana qismlari bilan tekshirish)
+            for (let i = 1; i < snake.length; i++) {
+                if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) {
+                    gameOver = true;
+                }
+            }
+
+            // Agar o'yin tugagan bo'lsa, matn chiqarish
+            if (gameOver) {
+                ctx.fillStyle = "white";
+                ctx.font = "30px Courier New";
+                ctx.textAlign = "center";
+                ctx.fillText("O'YIN TUGADI!", canvas.width / 2, canvas.height / 2);
+                ctx.font = "15px Courier New";
+                ctx.fillText("Qayta boshlash uchun F5 ni bosing", canvas.width / 2, canvas.height / 2 + 30);
+            }
+
+            return gameOver;
+        }
+
+        // --- 11. Klaviaturani tinglash (Tugmalarni bosish) ---
+        document.body.addEventListener('keydown', keyDown);
+
+        function keyDown(event) {
+            // Yuqoriga (Up arrow)
+            if (event.keyCode === 38 && dy !== 1) {
+                dy = -1;
+                dx = 0;
+            }
+            // Pastga (Down arrow)
+            if (event.keyCode === 40 && dy !== -1) {
+                dy = 1;
+                dx = 0;
+            }
+            // Chapga (Left arrow)
+            if (event.keyCode === 37 && dx !== 1) {
+                dy = 0;
+                dx = -1;
+            }
+            // O'ngga (Right arrow)
+            if (event.keyCode === 39 && dx !== -1) {
+                dy = 0;
+                dx = 1;
+            }
+        }
+
+        // --- 12. Dasturni ishga tushirish ---
+        drawGame();
+    </script>
+</body>
+</html>
